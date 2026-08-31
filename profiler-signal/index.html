@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profiler Signal — Overview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<style>
+  body.locked > :not(#gate){ filter: blur(14px) saturate(.85); pointer-events: none; user-select: none; }
+  body.locked{ overflow: hidden; }
+</style>
+<div id="gate" style="position:fixed;inset:0;z-index:1000;background:rgba(255,255,255,.35);
+  display:flex;align-items:center;justify-content:center;font-family:Manrope,system-ui,sans-serif">
+  <form id="gateform" style="width:min(360px,88vw);text-align:center;background:#fff;
+    border:1px solid #e4e6ea;border-radius:16px;padding:30px 26px 24px;
+    box-shadow:0 12px 40px rgba(26,29,35,.10)">
+    <div style="font-weight:800;font-size:19px;letter-spacing:-.02em;margin-bottom:6px">Profiler Signal</div>
+    <div style="color:#8d939c;font-size:13.5px;margin-bottom:18px">Enter the access password</div>
+    <input id="gatepw" type="password" autocomplete="off" autofocus
+      style="width:100%;box-sizing:border-box;font:15px Manrope,sans-serif;padding:11px 14px;
+      border:1px solid #dadde2;border-radius:10px;outline:none;text-align:center">
+    <button type="submit"
+      style="margin-top:10px;width:100%;font:600 14.5px Manrope,sans-serif;padding:11px;
+      border:none;border-radius:10px;background:#1a1d23;color:#fff;cursor:pointer">Open</button>
+    <div id="gatemsg" style="color:#c8302f;font-size:12.5px;margin-top:10px;min-height:16px"></div>
+    <div style="color:#b6bac1;font-size:11px;margin-top:14px;max-width:34ch;margin-left:auto;margin-right:auto">
+      Access gate for casual viewing only — this is a static page, not a secured system.</div>
+  </form>
+</div>
+<script>
+(function(){
+  var H='45d048719bd9d75485d0eb2f8364ee7f81d3196278f24ba7e8bcd6d8ea2ec7a4', D=3290684621;
+  try{ if(sessionStorage.getItem('pfs_ok')==='1'){ document.getElementById('gate').remove(); return; } }catch(e){}
+  document.body.classList.add('locked');
+  function djb2(s){ var h=5381; for(var i=0;i<s.length;i++){ h=((h*33)+s.charCodeAt(i))>>>0; } return h>>>0; }
+  function pass(){
+    try{ sessionStorage.setItem('pfs_ok','1'); }catch(e){}
+    document.getElementById('gate').remove();
+    document.body.classList.remove('locked');
+  }
+  function fail(){
+    var m=document.getElementById('gatemsg'); m.textContent='Incorrect password.';
+    var i=document.getElementById('gatepw'); i.value=''; i.focus();
+  }
+  document.getElementById('gateform').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var v=document.getElementById('gatepw').value;
+    if(window.crypto && crypto.subtle && crypto.subtle.digest){
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(v)).then(function(buf){
+        var hex=Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        (hex===H)?pass():fail();
+      }).catch(function(){ (djb2(v)===D)?pass():fail(); });
+    } else { (djb2(v)===D)?pass():fail(); }
+  });
+})();
+</script>
+
+
+<nav><div class="in">
+  <a class="brand" href="index.html">Profiler Signal<span> · LaSalle</span></a>
+  <a class="lnk on" href="index.html" aria-current="page">Overview</a>
+  <a class="lnk" href="episode.html">Events</a>
+  <a class="lnk" href="signal.html">Method</a>
+  <a class="lnk" href="../profiler-signal-2day/index.html">What if</a>
+  <span class="tag">8 episodes · 0 false alarms</span>
+</div></nav>
+
+<div class="wrap">
+
+  <div class="intro rv">
+    <div>
+      <div class="kicker">Canter line · April 2025 – June 2026</div>
+      <h1>A warning that arrives days before the profiler fails.</h1>
+      <p class="sub">Four motion-controller channels watch the profiler infeed rolls. When their daily
+      behaviour deviates hard for three straight production days, the signal fires. Fourteen months hold
+      eight warning episodes — any single implementation of the rule fires on seven of them, because a
+      threshold-edge pair swaps July for October between derivations. Seven of the eight were followed
+      within days by a documented profiler failure or repair; the remaining one tracked rolls the mill
+      had already documented as failing. No firing on record lacks a physical fault behind it.</p>
+    </div>
+    <dl class="facts">
+      <div><dt>Warning episodes</dt><dd>8 <small>union of both derivations</small></dd></div>
+      <div><dt>Firings per implementation</dt><dd>7</dd></div>
+      <div><dt>Confirmed outcome</dt><dd>7 <small>of 8</small></dd></div>
+      <div><dt>False alarms</dt><dd>0</dd></div>
+      <div><dt>Preventable cost</dt><dd>$230k<small>/yr</small></dd></div>
+      <div><dt>Significance</dt><dd class="sm">p ≈ 0.02 at 14 days (binomial, the report's seven)</dd></div>
+    </dl>
+  </div>
+
+  <section class="rv">
+    <h2>Fourteen months, on one screen</h2>
+    <p>Each line is one channel's daily deviation score. Shaded columns are open warnings — click a firing
+    number to open that event. Ticks above the plot are the mill's own records. Hover for the day's detail.</p>
+    <div class="panel">
+      <div class="figcap">
+        <span>Daily deviation score (z) · four infeed-roll channels</span>
+        <span>clamped ±12 · ▲▼ off-scale</span>
+      </div>
+      <div class="chartbox" id="chart"></div>
+      <div class="legend">
+        <span><span class="ln" style="background:var(--ch1)"></span>Left P1</span>
+        <span><span class="ln" style="background:var(--ch2)"></span>Left P2</span>
+        <span><span class="ln" style="background:var(--ch3)"></span>Right P1</span>
+        <span><span class="ln" style="background:var(--ch4)"></span>Right P2</span>
+        <span><span class="sw" style="background:var(--amber-dim);border:1px solid var(--amber-line)"></span>warning open</span>
+        <span><span class="sw" style="background:var(--miss);border:1px solid var(--rule2)"></span>formal miss</span>
+        <span><span class="sw" style="background:var(--red)"></span>costed stop</span>
+        <span><span class="sw" style="background:var(--wo)"></span>work order</span>
+        <span><span class="sw" style="background:var(--ledger)"></span>ledger repair</span>
+      </div>
+      <p class="note">Telemetry ends 2026-06-24; the costed-stop log and operator ledger end in early
+      March 2026, so the last two warnings are scored on work orders alone.</p>
+    </div>
+  </section>
+
+  <section class="rv">
+    <h2>The events</h2>
+    <p>The report's seven firings, plus one supplementary firing (marked S) that exists only in the
+    re-derivation plotted on this page — the October counterpart of the fragile July firing; each
+    derivation records seven firings and no false alarms. Each row opens the full event view: the zoomed
+    signal window, the mill's costed downtime through it, and every work-order, ledger, and stop record
+    that pertains to it.</p>
+    <div class="eplist" id="eplist"></div>
+    <p class="note" id="regnote"></p>
+  </section>
+
+  <section class="rv">
+    <h2>What to do when it fires</h2>
+    <dl class="dl">
+      <div><dt>On a firing</dt><dd>Schedule a profiler infeed inspection for the next scheduled downtime —
+        shift change, weekend, or planned window. Check bearings, cylinders, rolls, and chains.</dd></div>
+      <div><dt>On a re-fire</dt><dd>A deviation returning while a warning is still open means the fix did
+        not hold. <b>Escalate before restart.</b> December 30 and June 16–19 are the in-record examples.</dd></div>
+      <div><dt>The model case</dt><dd>Event 5, March 2026: a bearing replaced inside a window that was
+        already dead. The episode cost essentially zero production.</dd></div>
+      <div><dt>The counter-case</dt><dd>Event 4, December 2025: the warning stood through four
+        zero-production Christmas days, nobody inspected, and the profiler wrecked for $128k on restart.</dd></div>
+      <div><dt>What it is not</dt><dd>A guarantee. The signal is one-directional and misses roughly half of
+        profiler failures — silence means nothing. A firing has always meant something is wrong.</dd></div>
+    </dl>
+    <p style="margin-top:22px">How the signal is calculated and scored:
+      <a class="more" href="signal.html">Method →</a></p>
+  </section>
+
+  <section class="rv">
+    <h2>Why this adds to the weekly PM</h2>
+    <p>The profiler already gets a millwright inspection every Tuesday, and that route works — on the
+    infeed rolls alone it raised twenty corrective findings in fourteen months. The failures that still
+    got through slipped past three structural limits of any weekly walk, and the signal covers exactly
+    those three. Each event page carries the specific instance under "Signal × weekly PM".</p>
+    <dl class="dl">
+      <div><dt>Cadence</dt><dd>An inspection every seven days has a seven-day blind window; the signal
+        re-checks every production day. The record holds failure arcs that ran from first deviation to
+        wreck in 5–12 days.</dd></div>
+      <div><dt>Aim</dt><dd>A visual inspection samples what looks worst; the channels are per-axis. Twice
+        in this record a PM-raised repair fixed the mirror of the failing side — left rebuilt in November
+        while the right failed, right roll replaced in December while the left wrecked for $128k — and
+        both times the channels pointed at the side that was still deviating.</dd></div>
+      <div><dt>Verification &amp; the queue</dt><dd>A deviation that persists after a CPM means the wrong
+        element was fixed; a standing warning is the case for pulling queued work forward. In May 2026
+        the PM route found the rolls and scheduled the repair a month out — the warning fired four days
+        later, and the arc ended in reactive replacements in July.</dd></div>
+    </dl>
+    <p class="note">The complement runs both ways: the signal misses roughly half of profiler failures
+    (sudden breaks do not drift first), so it aims and grades the Tuesday visit — it does not replace
+    it.</p>
+  </section>
+
+  <footer>
+    Narrative, episode enumeration, and verdicts follow <span class="mono">Profiler Signal Findings
+    Report_final_2026-08-21</span> (deliverables/Sprint 3/Profiler Channel Signal). Plotted series:
+    <span class="mono">r6_daily_z_extended.csv</span>, an extended re-derivation running through June 2026.
+    Outcome records: the verified downtime log, the operator ledger through 2026-03-07, and the work-order
+    extract of 2026-07-10. The two derivations agree on six of the seven episodes; the July 2025 firing
+    does not reproduce in the plotted one (its run reaches two production days, not three), which instead
+    fires on 2025-10-14 — followed by profiler work orders three days later (row S above). Rebuild with
+    <span class="mono">build_data.py</span>; audit the rule with <span class="mono">check_firings.py</span>.
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>
+drawSignal(document.getElementById('chart'), {h: 350, animate: true, links: true});
+
+const list = document.getElementById('eplist');
+for (const ep of PROF_DATA.episodes){
+  list.insertAdjacentHTML('beforeend', `<a class="eprow" href="episode.html#${ep.n}">
+    <span class="dt">${ep.fired}</span>
+    <span class="txt"><h3>${ep.headline}</h3><p>${ep.events[0]}</p></span>
+    <span class="go">${ep.extra ? '<span class="badge">re-derivation only</span>' : ''}<span class="badge ${ep.verdict}">${ep.verdict === 'hit' ? 'confirmed' : 'formal miss'}</span>
+      <span class="arw">→</span></span>
+  </a>`);
+}
+const frag = PROF_DATA.episodes.filter(e => !e.rule_met).map(e => e.n);
+document.getElementById('regnote').innerHTML = frag.length
+  ? 'Measured on the plotted series, every firing holds |z| ≥ 3 for at least three consecutive production '
+    + 'days except <b>Event ' + frag.join(', ') + '</b>, which reaches two — the threshold-edge firing the '
+    + 'report footnotes as fragile. It is carried because the report counts it; its October counterpart '
+    + '(row S) fires only in this derivation. Eight episodes in the union, seven under either single '
+    + 'implementation.'
+  : '';
+initMotion();
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profiler Signal — 2-Day Rule Variant</title>
+<script>try{if(sessionStorage.getItem('pfs_ok')!=='1')location.replace('../profiler-signal/index.html');}catch(e){location.replace('../profiler-signal/index.html');}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#ffffff; --paper2:#f7f8fa; --paper3:#eef1f5;
+  --ink:#1a1d23; --ink2:#545a63; --muted:#8d939c;
+  --rule:#eaecf0; --rule2:#dadde2; --axis:#c2c7ce; --grid:#f0f2f5;
+  --band:rgba(26,29,35,.028); --r:14px; --r-sm:9px;
+  --ch1:#1f6fd0; --ch2:#e2621f; --ch3:#a12a6b; --ch4:#2b3138;
+  --amber:#a9700a; --amber-dim:rgba(169,112,10,.10); --amber-line:rgba(169,112,10,.42);
+  --missw:rgba(200,48,47,.08); --missline:rgba(200,48,47,.5);
+  --red:#c8302f; --wo:#0f7d55; --ledger:#5b6672;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.68 "Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"DM Mono",ui-monospace,Consolas,monospace}
+nav{border-bottom:1px solid var(--rule);background:rgba(255,255,255,.94);
+  position:sticky;top:0;z-index:40;backdrop-filter:blur(7px)}
+nav .in{max-width:1120px;margin:0 auto;padding:17px 30px;display:flex;gap:28px;align-items:center}
+nav .brand{font-weight:800;font-size:15px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
+nav .brand span{color:var(--muted);font-weight:500}
+nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;padding:6px 12px;border-radius:99px}
+nav a.lnk:hover{color:var(--ink);background:var(--paper2)}
+nav .tag{margin-left:auto;font-family:"DM Mono",monospace;font-size:11.5px;color:var(--amber);letter-spacing:.04em}
+.wrap{max-width:1120px;margin:0 auto;padding:56px 30px 110px}
+h1{font-size:clamp(29px,3.5vw,42px);line-height:1.15;font-weight:800;letter-spacing:-.026em;margin:0 0 18px;text-wrap:balance}
+h2{font-size:21px;font-weight:700;letter-spacing:-.018em;margin:0 0 10px}
+p{color:var(--ink2);max-width:72ch;margin:0 0 15px}
+p b,li b,td b{color:var(--ink);font-weight:700}
+ul{color:var(--ink2);max-width:70ch;padding-left:21px;margin:0 0 15px}
+li{margin-top:8px} li::marker{color:var(--muted)}
+section{margin-top:64px}
+.kicker{font-family:"DM Mono",monospace;font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--amber);margin-bottom:9px}
+a.more{color:var(--ink);font-weight:600;text-decoration:none;border-bottom:1.5px solid var(--rule2)}
+a.more:hover{border-bottom-color:var(--amber)}
+.intro{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(240px,.85fr);gap:56px;align-items:start}
+.intro .sub{font-size:17.5px;line-height:1.6;color:var(--ink2);max-width:56ch;margin:0}
+.facts{margin:6px 0 0;background:var(--paper2);border-radius:var(--r);padding:6px 22px}
+.facts > div{padding:15px 0;border-bottom:1px solid var(--rule)}
+.facts > div:last-child{border-bottom:none}
+.facts dt{font-size:12.5px;color:var(--muted);font-weight:500}
+.facts dd{margin:2px 0 0;font-size:26px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.2}
+.facts dd small{font-size:14px;color:var(--muted);font-weight:600}
+.facts dd.sm{font-size:14.5px;font-weight:600;line-height:1.45;color:var(--ink2)}
+.panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);padding:20px 20px 14px;box-shadow:0 1px 2px rgba(26,29,35,.03)}
+.chartbox{position:relative}
+.chartbox svg{display:block;width:100%;height:auto}
+.figcap{display:flex;justify-content:space-between;gap:18px;font-family:"DM Mono",monospace;font-size:11px;color:var(--muted);padding:0 2px 12px}
+.legend{display:flex;flex-wrap:wrap;gap:7px 18px;margin:12px 2px 2px;font-size:12.5px;color:var(--ink2)}
+.legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .ln{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--rule2);
+  border-radius:var(--r-sm);padding:10px 13px;font-size:12.5px;box-shadow:0 8px 26px rgba(26,29,35,.13);
+  max-width:360px;display:none;z-index:20}
+.tip .d{font-weight:700;font-family:"DM Mono",monospace;font-size:11.5px;color:var(--muted)}
+.tip .ev{margin-top:5px;color:var(--ink2)}
+.note{font-size:13px;color:var(--muted);max-width:94ch;margin-top:13px;line-height:1.6}
+.note b{color:var(--ink2)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{color:var(--muted);font-weight:600;text-align:left;font-size:12px;border-bottom:1px solid var(--rule2);padding:0 16px 10px 0;white-space:nowrap}
+td{padding:12px 16px 12px 0;border-bottom:1px solid var(--rule);vertical-align:top;color:var(--ink2)}
+td.num,th.num{font-variant-numeric:tabular-nums;font-family:"DM Mono",monospace;font-size:12.5px;white-space:nowrap;color:var(--ink)}
+.tablebox{overflow-x:auto}
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:99px;white-space:nowrap;background:var(--paper3);color:var(--ink2)}
+.badge.hit{background:rgba(15,125,85,.1);color:var(--wo)}
+.badge.miss{background:rgba(200,48,47,.1);color:var(--red)}
+.callout{background:var(--paper2);border-radius:var(--r);padding:22px 26px;margin:22px 0}
+.callout p:last-child{margin-bottom:0}
+footer{margin-top:76px;padding-top:20px;border-top:1px solid var(--rule);color:var(--muted);font-size:12.5px;line-height:1.65;max-width:96ch}
+@media (prefers-reduced-motion: no-preference){
+  .rv{opacity:0;transform:translateY(10px);transition:opacity .5s ease,transform .5s ease}
+  .rv.in{opacity:1;transform:none}
+}
+@media (max-width:900px){ .intro{grid-template-columns:1fr;gap:30px} }
+</style>
+</head>
+<body>
+
+<nav><div class="in">
+  <a class="brand" href="../profiler-signal/index.html">Profiler Signal<span> · LaSalle</span></a>
+  <a class="lnk" href="../profiler-signal/index.html">Overview</a>
+  <a class="lnk" href="../profiler-signal/episode.html">Events</a>
+  <a class="lnk" href="../profiler-signal/signal.html">Method</a>
+  <a class="lnk on" href="index.html" aria-current="page">What if</a>
+  <span class="tag">RULE VARIANT · NOT DEPLOYED</span>
+</div></nav>
+
+<div class="wrap">
+  <div class="intro rv">
+    <div>
+      <div class="kicker">What-if analysis · 2-day persistence</div>
+      <h1>The same signal, firing one day sooner.</h1>
+      <p class="sub">The deployed rule fires when a channel deviates for <b>three</b> consecutive
+      production days. This page re-runs the whole record with a <b>two-day</b> requirement: every
+      warning fires a day earlier, the fragile July 2025 episode is recovered, and every warning window
+      closed against a documented profiler repair — paid for with nearly twice the warnings, flat-window
+      statistics at chance level, and three windows whose only confirmation is a PM-found repair.
+      Everything here is computed from the same series and mill records as the main site.</p>
+    </div>
+    <dl class="facts" id="facts"></dl>
+  </div>
+
+  <section class="rv">
+    <h2>The record under the 2-day rule</h2>
+    <p>Repair-aware warnings: each opens at a 2-day firing, absorbs re-fires, and closes on a documented
+    profiler repair plus two calm days, or five calm days with none. Amber spans closed against strict
+    evidence (a reactive work order, costed stop, or ledger repair); grey spans closed against a
+    corrective-from-PM repair only. Diamonds above a span mark re-fires inside it.</p>
+    <div class="panel">
+      <div class="figcap"><span>Daily deviation score (z) · four infeed-roll channels</span><span>clamped ±12 · ▲▼ off-scale</span></div>
+      <div class="chartbox" id="chart"></div>
+      <div class="legend">
+        <span><span class="ln" style="background:var(--ch1)"></span>Left P1</span>
+        <span><span class="ln" style="background:var(--ch2)"></span>Left P2</span>
+        <span><span class="ln" style="background:var(--ch3)"></span>Right P1</span>
+        <span><span class="ln" style="background:var(--ch4)"></span>Right P2</span>
+        <span><span class="sw" style="background:var(--amber-dim);border:1px solid var(--amber-line)"></span>warning → reactive / stop / ledger</span>
+        <span><span class="sw" style="background:var(--paper3);border:1px solid var(--rule2)"></span>warning → CPM repair only</span>
+        <span><span class="sw" style="background:var(--red)"></span>stop</span>
+        <span><span class="sw" style="background:var(--wo)"></span>work order</span>
+        <span><span class="sw" style="background:var(--ledger)"></span>ledger repair</span>
+      </div>
+      <p class="note" id="chartnote"></p>
+    </div>
+  </section>
+
+  <section class="rv">
+    <h2>Every 2-day warning</h2>
+    <div class="panel"><div class="tablebox"><table id="wtable">
+      <thead><tr><th class="num">Fired</th><th class="num">Closed</th><th class="num">Days</th>
+      <th>Closed by</th><th class="num">Re-fires</th><th class="num">First evidence</th><th>Outcome</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note" id="wnote"></p></div>
+  </section>
+
+  <section class="rv">
+    <h2>Two days vs three, side by side</h2>
+    <div class="panel"><div class="tablebox"><table id="cmp">
+      <thead><tr><th></th><th class="num">3-day rule</th><th class="num">2-day rule</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note">Raw firings use the 7-production-day dedup; hits use the report's strict definition —
+    a reactive work order on the profiler, a profiler-attributed costed stop, or an operator-ledger repair
+    record. The repair-aware rows carry no p-value because that metric saturates: with CPMs counted as
+    repairs, a window opened on a random production day closes against a documented profiler repair
+    <b>88% of the time</b> (measured — check_ra_base.py in the main folder; 1-, 2-, and 3-day all land
+    at 91–94%, p ≥ 0.39 against that base). The flat strict rows are where the rules actually
+    separate.</p>
+    </div>
+  </section>
+
+  <section class="rv">
+    <h2>Estimated incremental savings — reactive time only</h2>
+    <p>What the 2-day rule could save <b>beyond the 3-day rule</b>, counting only reactive downtime that
+    followed a warning the 3-day rule never raised. Firing one day earlier on shared episodes adds
+    nothing here — every 3-day warning already had free repair windows before its failure — so the value
+    sits entirely in the five incremental windows, and only three of them have measurable reactive time
+    behind them.</p>
+    <div class="panel"><div class="tablebox"><table>
+      <thead><tr><th>Incremental warning</th><th>Reactive event that followed</th>
+      <th class="num">Reactive time</th><th class="num">Claimable</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2025-05-26</td>
+            <td>DT042 — $16.7k costed profiler stop (Jun 2, 65 min), attributed to reactive WO119269
+            "change position cylinder"; 7 days of notice the 3-day rule never gave</td>
+            <td class="num">65 min costed</td>
+            <td class="num">$8.4–12.6k <span style="color:var(--muted)">(50–75% prevention)</span></td></tr>
+        <tr><td class="num">2025-06-23</td>
+            <td>Left P2 cylinder changed mid-shift Jul 10 — 45 min output-stopped, uncosted (WO125870);
+            the fragile-July arc, caught 17 days ahead</td>
+            <td class="num">45 min</td>
+            <td class="num">$39–45k <span style="color:var(--muted)">(timing-shift, the report's Ep 2 figure)</span></td></tr>
+        <tr><td class="num">2025-11-25</td>
+            <td>Ledger, Dec 8: "Profiler out of position stuck cant / changed saws" — 33 min mid-shift
+            repair, uncosted; output-stop not independently verified</td>
+            <td class="num">33 min</td>
+            <td class="num">$16.5–33k <span style="color:var(--muted)">(50–100% timing-shift)</span></td></tr>
+        <tr><td class="num">2026-04-26</td>
+            <td>CPM-only window (PM route had already found the rolls) — no reactive time</td>
+            <td class="num">—</td><td class="num">$0</td></tr>
+        <tr><td class="num">2026-05-11</td>
+            <td>Closed by the May 25 infeed-roll CPM — no reactive time</td>
+            <td class="num">—</td><td class="num">$0</td></tr>
+        <tr><td><b>Total</b></td><td></td><td class="num"><b>143 min</b></td>
+            <td class="num"><b>$64–91k/yr · central ≈ $75k</b></td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Method: the report's own conventions at $1,000 per output-stopped minute — costed
+    stops claimed at 50–75% prevention, mid-shift uncosted repairs as timing shifts. All three valued
+    windows fall inside the costed year (Apr 2025 – Mar 2026), so the total reads directly as a per-year
+    figure. <b>Baseline caveat:</b> this is incremental against the 3-day rule as implemented on these
+    pages. The report's original derivation already fires on the July arc, so against the report's $230k
+    the net-new value is the other two rows — <b>roughly $25–46k/yr</b>. Either way it is additive only if
+    the extra warnings get acted on; as a sensitive tier it is upside, not a promise.</p>
+    </div>
+  </section>
+
+  <section class="rv">
+    <h2>Verdict</h2>
+    <div class="callout">
+      <p><b>What two days buys:</b> one extra day of lead on every episode the 3-day rule already catches,
+      and the June–July 2025 arc — a warning on June 23 that absorbed the fragile July firing and was
+      confirmed by the July 10 cylinder repair, seventeen days later.</p>
+      <p><b>What it costs:</b> nearly twice the warnings (11 vs 6), flat 7-day precision at chance level,
+      and a thinner grade of confirmation — three of the eleven windows closed against corrective-from-PM
+      repairs with no reactive work order, costed stop, or ledger record inside (the 3-day rule's six
+      windows all carry strict evidence). The May 26 boundary case shows how timing-fragile verdicts get
+      at this threshold: the window closed one day before a $16.7k profiler stop already tied to a
+      reactive repair.</p>
+      <p><b>Recommendation:</b> keep the 3-day rule as the trigger. The 2-day condition earns its keep as
+      a <b>sensitive tier</b> — a note on the shift report, never a page — where the extra day of lead,
+      the July-arc catch, and roughly $25–90k/yr of reactive time (depending on baseline, above) are
+      worth having and the weaker confirmation grade costs nothing.</p>
+    </div>
+  </section>
+
+  <footer>
+    Rule variant analysis, not a deployed alarm. Series: <span class="mono">r6_daily_z_extended.csv</span>
+    (extended re-derivation, Apr 2025 – Jun 2026). Evidence: verified downtime log (to 2026-03-05),
+    operator ledger (to 2026-03-07), work-order extract of 2026-07-10 — the last three months score on
+    work orders alone. Rebuild with <span class="mono">build_data.py</span>; equivalent scoring for the
+    deployed rule lives in <span class="mono">../profiler-signal/</span>
+    (<span class="mono">check_2day.py</span>, <span class="mono">check_repair_aware.py</span>).
+  </footer>
+</div>
+
+<script>
+const D = {"days":["2025-04-13","2025-04-14","2025-04-15","2025-04-16","2025-04-17","2025-04-18","2025-04-20","2025-04-21","2025-04-22","2025-04-23","2025-04-24","2025-04-25","2025-04-27","2025-04-28","2025-04-29","2025-04-30","2025-05-01","2025-05-02","2025-05-04","2025-05-05","2025-05-06","2025-05-07","2025-05-08","2025-05-09","2025-05-11","2025-05-12","2025-05-13","2025-05-14","2025-05-15","2025-05-16","2025-05-18","2025-05-19","2025-05-20","2025-05-21","2025-05-22","2025-05-23","2025-05-25","2025-05-26","2025-05-27","2025-05-28","2025-05-29","2025-05-30","2025-06-01","2025-06-02","2025-06-03","2025-06-04","2025-06-05","2025-06-06","2025-06-08","2025-06-09","2025-06-10","2025-06-11","2025-06-12","2025-06-13","2025-06-15","2025-06-16","2025-06-17","2025-06-18","2025-06-19","2025-06-20","2025-06-22","2025-06-23","2025-06-24","2025-06-25","2025-06-26","2025-06-27","2025-06-29","2025-06-30","2025-07-01","2025-07-02","2025-07-03","2025-07-04","2025-07-06","2025-07-07","2025-07-08","2025-07-09","2025-07-10","2025-07-11","2025-07-13","2025-07-14","2025-07-15","2025-07-16","2025-07-17","2025-07-18","2025-07-20","2025-07-21","2025-07-22","2025-07-23","2025-07-24","2025-07-25","2025-07-27","2025-07-28","2025-07-29","2025-07-30","2025-07-31","2025-08-01","2025-08-03","2025-08-04","2025-08-05","2025-08-06","2025-08-07","2025-08-08","2025-08-10","2025-08-11","2025-08-12","2025-08-13","2025-08-14","2025-08-15","2025-08-17","2025-08-18","2025-08-19","2025-08-20","2025-08-21","2025-08-22","2025-08-24","2025-08-25","2025-08-26","2025-08-27","2025-08-28","2025-08-29","2025-08-31","2025-09-01","2025-09-02","2025-09-03","2025-09-04","2025-09-05","2025-09-07","2025-09-08","2025-09-09","2025-09-10","2025-09-11","2025-09-12","2025-09-14","2025-09-15","2025-09-16","2025-09-17","2025-09-18","2025-09-19","2025-09-22","2025-09-23","2025-09-24","2025-09-25","2025-09-26","2025-09-29","2025-09-30","2025-10-01","2025-10-02","2025-10-03","2025-10-05","2025-10-06","2025-10-07","2025-10-08","2025-10-09","2025-10-12","2025-10-13","2025-10-14","2025-10-15","2025-10-16","2025-10-19","2025-10-20","2025-10-21","2025-10-22","2025-10-23","2025-10-24","2025-10-26","2025-10-27","2025-10-28","2025-10-29","2025-10-30","2025-10-31","2025-11-02","2025-11-03","2025-11-04","2025-11-05","2025-11-06","2025-11-09","2025-11-10","2025-11-11","2025-11-12","2025-11-13","2025-11-16","2025-11-17","2025-11-18","2025-11-19","2025-11-20","2025-11-23","2025-11-24","2025-11-25","2025-11-26","2025-11-27","2025-11-30","2025-12-01","2025-12-02","2025-12-03","2025-12-04","2025-12-05","2025-12-07","2025-12-08","2025-12-09","2025-12-10","2025-12-11","2025-12-12","2025-12-13","2025-12-14","2025-12-15","2025-12-16","2025-12-17","2025-12-18","2025-12-19","2025-12-21","2025-12-22","2025-12-23","2025-12-24","2025-12-28","2025-12-29","2025-12-30","2025-12-31","2026-01-01","2026-01-04","2026-01-05","2026-01-06","2026-01-07","2026-01-08","2026-01-09","2026-01-11","2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-16","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-23","2026-02-01","2026-02-02","2026-02-03","2026-02-04","2026-02-05","2026-02-06","2026-02-08","2026-02-09","2026-02-10","2026-02-11","2026-02-12","2026-02-13","2026-02-15","2026-02-16","2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-22","2026-02-23","2026-02-24","2026-02-25","2026-02-26","2026-02-27","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-27","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-03","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30","2026-05-01","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-24","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-05-31","2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05","2026-06-07","2026-06-08","2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-14","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-21","2026-06-22","2026-06-23","2026-06-24"],"channels":["oli_rmc_LeftPrflr1InfdRoll","oli_rmc_LeftPrflr2InfdRoll","oli_rmc_RightPrflr1InfdRoll","oli_rmc_RightPrflr2InfdRoll"],"series":{"oli_rmc_LeftPrflr1InfdRoll":[null,null,null,null,null,null,null,null,null,null,-0.9,0.67,-2.02,-0.67,0.0,-0.67,-2.02,-1.35,-2.36,0.0,-2.7,0.0,0.0,2.02,-4.05,-2.7,-0.67,-1.35,-0.67,0.67,-1.35,-1.35,-0.22,0.0,1.01,1.35,-3.82,-3.37,-1.35,-0.67,-0.67,-0.67,1.54,1.12,0.22,1.12,1.12,0.0,-0.39,0.0,1.62,1.08,-0.19,0.39,-3.24,-1.62,-1.62,-1.16,-1.01,-0.59,-4.13,-4.57,-1.87,-0.17,0.34,0.0,1.69,2.36,2.36,2.02,0.97,0.54,1.62,1.35,0.67,1.12,0.45,0.79,0.0,0.51,0.52,1.14,0.48,0.83,0.29,0.11,0.45,0.92,0.27,-0.59,-1.83,0.87,2.02,0.0,-1.01,-1.01,0.17,-0.67,-0.34,0.0,0.67,0.34,0.0,1.35,0.0,0.67,0.0,-2.02,1.01,0.67,1.35,-0.17,-0.67,2.7,-2.7,-2.7,-1.62,-1.16,-0.77,-1.69,-1.35,-0.67,-1.01,-0.67,-1.01,0.0,-4.05,-1.35,-1.69,-0.45,-0.67,null,null,0.9,-0.67,-0.45,0.0,-1.35,-1.35,-2.02,-1.12,0.0,0.0,-2.02,-0.67,0.0,-1.35,-2.02,-4.05,-1.35,0.67,0.0,-0.34,-2.56,-1.21,0.67,0.0,0.67,-2.87,-0.17,0.0,-1.35,-2.02,0.67,-2.7,-0.67,-2.02,-0.67,0.54,-1.35,0.39,0.22,0.22,0.22,0.67,-0.67,-0.67,-0.67,0.67,1.35,0.67,1.35,0.67,-0.67,0.0,-2.02,-1.35,-1.35,-1.57,-0.67,0.0,0.67,-1.35,1.35,1.35,-0.67,0.0,0.13,-0.67,0.13,0.0,0.67,0.67,-0.67,3.37,3.91,5.4,3.37,4.72,-5.4,-4.05,-4.05,-3.48,-2.41,-3.95,-3.37,-3.04,-3.37,-2.16,-1.54,-0.86,-0.9,-0.67,-0.67,-0.94,-0.37,-0.48,-0.45,-0.81,-0.27,-1.01,0.17,-0.67,-1.35,0.0,-0.67,2.02,2.7,1.35,1.35,2.02,2.02,4.05,2.25,2.25,2.25,1.8,1.12,0.34,1.35,0.67,2.53,2.7,1.08,0.94,0.81,0.54,1.35,1.69,0.17,2.02,2.36,3.37,2.7,2.02,1.35,1.69,1.21,1.57,0.9,0.9,0.56,1.21,0.94,1.57,-0.22,-0.9,-1.12,3.15,0.94,0.34,0.0,-0.17,-0.84,-1.01,0.0,0.67,1.01,0.0,-0.51,-0.77,0.0,-0.84,0.0,-0.58,0.0,0.77,-0.34,0.67,0.0,-0.84,-1.35,-0.67,-0.67,-0.67,-2.29,-10.0,3.04,1.64,1.25,1.64,0.08,0.42,1.52,1.35,1.01,0.51,0.0,0.17,-0.34,-0.34,-1.35,-24.96,-14.84,-0.67,0.34,null,null,-0.3,-0.51,1.2,-0.12,0.0,-4.91,-7.76,-6.59,-6.17,-5.97,-6.02,-5.78,-5.59,-5.3,-4.27,-3.13,-2.59,-2.23,-1.43,-0.93,-0.12,-0.05,-0.78,-1.17,-1.33,-1.5,-0.4,0.0,0.0,-0.27],"oli_rmc_LeftPrflr2InfdRoll":[null,null,null,null,null,null,null,null,null,null,0.0,1.35,21.58,12.14,8.09,4.72,17.09,37.1,22.03,17.71,13.09,11.02,10.57,9.33,4.6,3.63,2.54,1.66,1.22,0.89,0.45,0.1,-0.16,-0.23,-0.24,-0.19,-1.51,-1.33,-1.15,-1.03,-0.91,-0.79,-0.73,-0.65,-0.72,-0.84,-0.78,-0.73,-0.67,-0.67,-0.73,-0.58,-0.58,-0.9,-0.58,-0.11,0.61,0.4,0.75,0.15,-1.16,-0.29,-0.11,1.35,0.54,-0.34,-4.38,-1.01,-1.35,-1.35,-2.36,-3.37,-1.62,-2.02,-2.12,-1.93,-2.96,-1.35,-2.25,-1.27,-1.2,-0.07,-1.08,-0.2,0.13,-0.13,-0.32,-0.13,-0.28,-1.98,-2.12,-0.29,0.0,-0.19,-1.01,-1.35,-1.12,-0.22,-0.22,-0.37,0.74,1.35,0.12,0.67,0.94,0.74,-0.45,0.0,1.35,1.23,2.02,-1.01,1.48,1.85,3.51,2.16,1.35,1.8,1.66,0.87,-0.17,0.54,-0.77,-0.1,-0.19,-1.06,-3.57,-1.83,-1.16,-0.99,-0.27,null,null,-0.25,0.25,-0.42,0.04,-0.34,0.34,0.0,0.0,0.0,0.0,0.0,0.67,0.0,-1.01,-1.35,-3.29,-0.87,-0.45,0.0,-0.67,-12.82,-2.25,-2.7,-1.35,0.34,-3.82,-1.12,-3.37,-1.69,-0.67,-2.36,-4.05,-2.02,-0.9,-0.48,-0.84,-2.19,1.35,3.2,2.87,3.46,4.38,3.04,2.7,2.36,3.3,1.72,1.8,2.59,1.97,1.35,1.67,1.72,1.29,1.14,0.67,0.71,-0.07,0.3,-0.12,0.22,-0.27,-2.19,1.35,0.08,-0.19,-0.22,0.22,0.87,2.02,0.67,1.69,1.85,1.42,-0.34,0.82,0.07,0.61,0.0,-0.13,0.4,-1.05,-1.08,-0.52,0.14,0.0,0.67,0.67,0.0,0.67,1.83,1.26,1.85,3.2,2.87,1.42,2.36,-2.7,3.04,1.85,2.7,1.9,3.08,1.04,0.18,-1.09,-0.94,-0.58,-0.3,-0.08,-0.08,0.08,-0.22,-0.24,-0.06,-0.06,0.28,-0.39,0.17,-0.31,-0.18,-0.41,-0.47,-1.71,-0.21,-0.56,-1.35,-6.38,-5.64,-5.15,-5.28,-5.2,-3.18,-2.7,-3.42,-3.13,-4.48,-4.1,-5.08,-2.88,-1.4,-0.11,0.29,2.48,2.63,2.7,1.96,2.63,1.76,1.12,0.72,-0.52,-0.09,0.2,0.81,1.28,1.28,1.25,0.91,0.46,0.58,0.27,0.07,0.22,-0.18,-0.45,0.02,-0.3,-1.75,-0.4,-0.8,-0.8,-1.78,-4.35,1.51,0.35,0.11,0.13,0.13,0.4,0.49,0.72,4.27,1.35,0.0,4.95,3.04,1.04,-1.45,-14.21,-9.27,0.45,1.05,null,null,0.9,0.67,1.55,0.59,0.25,0.67,1.1,0.1,0.51,0.52,-1.1,-0.52,-1.1,-1.84,-2.33,-0.56,-1.91,-5.65,-8.77,-14.94,-2.28,-2.77,-7.42,-5.11,-5.73,-5.85,-0.67,-0.29,-0.6,-0.94],"oli_rmc_RightPrflr1InfdRoll":[null,null,null,null,null,null,null,null,null,null,0.34,4.05,-3.6,-0.67,-1.57,-2.02,-2.92,-2.02,-2.02,0.0,-2.02,-0.67,0.0,-1.01,-2.7,-2.02,null,null,null,null,-0.67,-1.35,-0.17,-0.39,0.0,0.54,-3.37,-2.02,-1.24,-0.67,-0.13,0.0,1.35,0.67,0.67,1.35,1.35,-0.13,0.94,-0.22,0.94,0.67,-0.22,-0.94,-3.37,-1.35,0.0,-0.67,-0.67,-1.35,-4.05,-4.32,-0.77,0.0,0.34,0.34,1.54,2.7,3.08,3.47,1.69,1.12,1.8,1.85,1.35,1.5,1.23,0.9,0.29,0.48,0.9,1.25,0.67,0.73,0.67,0.4,1.01,1.01,0.67,-0.67,-0.67,1.12,2.02,0.34,0.0,-0.67,0.67,0.0,0.67,0.67,1.35,0.0,0.0,1.35,1.35,2.02,0.0,0.67,0.0,0.67,0.0,-1.01,-0.67,1.35,-1.69,-3.04,-2.02,-2.02,-2.7,-3.37,-2.7,-1.35,-1.12,-1.08,-1.16,-0.67,-2.7,-1.35,-1.25,-0.42,-0.76,null,null,0.67,-0.45,-0.67,-0.22,-0.9,-0.45,-1.48,-2.02,-0.67,0.0,-0.67,-0.67,0.0,-0.67,-0.67,-6.07,0.67,0.22,2.02,-0.67,-2.02,-2.02,0.67,0.67,0.67,-4.72,0.67,-0.67,-0.22,-1.35,0.67,-0.67,0.0,-1.69,0.0,0.67,-1.69,0.0,0.67,0.0,-1.35,0.0,-0.67,-0.67,-0.67,0.0,0.0,1.35,1.35,0.67,0.0,0.67,-0.67,0.0,-0.67,-2.02,0.0,-0.34,0.67,-1.01,1.35,0.0,-0.67,0.67,0.67,0.67,0.67,0.0,1.35,0.67,0.67,2.7,3.37,6.07,1.35,3.04,-3.37,-3.37,-4.05,-4.05,-2.02,-3.37,-4.32,-1.93,-2.7,-1.62,-1.35,-0.96,-0.67,-0.67,-0.77,-0.67,-0.19,-0.39,-0.54,-1.01,-0.29,0.4,-0.13,-0.67,0.0,0.0,0.0,1.35,2.02,1.35,0.67,0.67,2.02,2.7,2.02,2.02,2.02,1.35,1.48,0.67,1.35,0.67,2.7,3.37,1.12,0.9,0.9,0.9,0.9,1.57,-0.67,4.05,2.7,3.37,2.7,2.02,1.35,0.67,1.35,1.8,0.9,1.35,0.9,1.12,0.34,2.7,-0.22,-1.12,-1.57,5.62,0.9,0.9,0.0,0.0,0.0,-2.02,-0.67,0.0,0.67,0.0,-0.67,-1.35,-1.35,-1.35,0.67,-0.67,-1.01,0.0,-0.67,0.67,-0.67,-0.67,-2.7,-0.81,-0.67,-0.67,-1.35,-7.08,2.02,1.35,1.35,1.35,0.0,0.67,1.35,1.35,1.35,0.0,0.0,1.69,-0.34,0.67,-0.67,-35.07,-26.31,0.0,0.67,null,null,-0.45,-1.01,1.62,1.16,0.0,-3.08,-6.41,-7.08,-6.41,-6.41,-6.91,-6.74,-7.08,-6.52,-4.1,-3.24,-2.82,-2.55,-1.65,-0.28,-0.19,-0.21,-1.39,-1.09,-1.35,-2.22,-0.69,0.02,-0.11,0.11],"oli_rmc_RightPrflr2InfdRoll":[null,null,null,null,null,null,null,null,null,null,0.0,null,45.87,15.51,8.09,3.37,9.44,18.21,18.89,20.91,9.61,6.74,5.49,4.18,3.25,3.04,null,null,null,null,2.61,1.39,1.04,0.85,0.7,0.44,-2.02,-1.4,-1.4,-1.19,-0.99,-0.67,-0.88,-0.78,-0.88,-0.88,-0.67,-0.83,-1.09,-0.57,-0.1,-0.05,-0.13,-0.48,-1.82,-0.08,1.69,1.01,0.59,0.17,-2.28,-3.57,0.0,1.35,1.35,1.69,-2.19,-0.34,-0.39,-0.54,-2.36,-2.16,-2.97,-1.54,-1.69,-2.7,-2.08,-1.8,-2.59,-1.35,-0.3,-0.53,-0.78,-1.2,-0.51,-0.17,0.19,0.29,0.29,-0.56,-3.04,-0.54,1.69,0.0,-0.34,-1.35,1.1,0.67,1.01,1.01,1.35,1.35,0.34,2.02,0.54,0.81,0.13,0.0,0.84,1.45,1.25,-0.29,0.87,1.01,1.35,0.34,1.57,0.67,1.35,1.01,-1.69,-0.34,-1.35,-1.69,-2.02,-1.01,-4.05,-2.7,-2.36,-1.69,-1.48,null,null,-0.22,-0.29,-0.67,-0.22,-0.67,0.31,-0.11,0.27,0.0,0.0,0.34,0.34,0.0,0.67,0.34,-2.36,-0.34,0.45,0.67,-2.7,-4.38,-4.05,-3.37,-1.35,-0.9,-2.25,-2.25,-1.8,-2.7,-1.35,-1.12,-1.48,-0.67,-0.79,-1.21,-1.12,-1.66,0.22,0.98,0.98,0.74,0.86,0.74,0.98,1.23,0.98,0.4,1.21,2.02,0.94,0.74,1.96,2.83,3.71,4.05,1.8,2.85,1.66,1.85,1.52,2.25,1.89,1.28,1.86,1.69,1.62,1.35,0.9,0.78,1.11,0.26,0.67,1.24,0.97,0.54,1.57,-1.5,-0.26,-1.42,-1.69,-0.34,-2.77,-2.77,-2.17,-1.57,-1.59,-1.35,-0.67,-1.12,-0.45,-0.45,-1.06,-0.1,0.1,-0.1,0.34,0.19,0.22,0.45,0.27,0.34,0.51,1.01,-2.02,-2.36,-3.04,-1.48,-0.67,-0.13,-0.13,-0.67,0.0,0.0,-0.34,-1.01,-1.01,0.0,-0.81,0.45,0.45,0.0,-1.01,0.0,-0.67,0.45,0.0,-0.34,-3.51,-3.24,-2.56,-3.71,-4.14,-1.64,-0.94,-2.02,-2.29,-2.56,-3.91,-3.82,-2.47,-1.12,0.3,0.46,0.46,0.97,0.1,0.1,0.24,-0.03,0.04,-0.28,-0.26,-0.14,0.16,0.32,0.51,-0.17,-0.1,-0.1,-0.48,0.1,-0.22,-0.54,-0.13,-0.22,0.22,-0.13,-0.17,-1.57,-0.67,-0.67,-0.67,-0.67,-12.48,2.7,2.7,3.37,4.38,2.7,4.72,3.37,2.7,1.35,1.35,1.8,-1.57,1.35,0.67,0.17,-20.57,-13.49,0.13,-0.34,null,null,0.54,-2.29,-0.67,-0.94,-1.21,-3.37,-4.99,-4.99,-3.93,-3.93,-3.28,-3.33,-2.62,-2.39,-1.56,-1.09,-0.91,-1.7,-2.14,-1.71,-0.16,-0.18,-1.93,-1.69,-1.69,-3.2,-0.76,-0.02,-0.07,-0.48]},"nonprod":["2025-04-19","2025-04-26","2025-05-03","2025-05-10","2025-05-17","2025-05-24","2025-05-31","2025-06-07","2025-06-14","2025-06-21","2025-06-28","2025-07-05","2025-07-12","2025-07-19","2025-07-26","2025-08-02","2025-08-09","2025-08-16","2025-08-23","2025-08-30","2025-09-06","2025-09-13","2025-09-20","2025-09-21","2025-09-27","2025-09-28","2025-10-04","2025-10-10","2025-10-11","2025-10-17","2025-10-18","2025-10-25","2025-11-01","2025-11-07","2025-11-08","2025-11-14","2025-11-15","2025-11-21","2025-11-22","2025-11-28","2025-11-29","2025-12-06","2025-12-20","2025-12-25","2025-12-26","2025-12-27","2026-01-02","2026-01-03","2026-01-10","2026-01-17","2026-01-24","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31","2026-02-07","2026-02-14","2026-02-21","2026-02-28","2026-03-07","2026-03-14","2026-03-21","2026-03-28","2026-04-04","2026-04-05","2026-04-11","2026-04-18","2026-04-25","2026-05-02","2026-05-09","2026-05-10","2026-05-16","2026-05-23","2026-05-30","2026-06-06","2026-06-13","2026-06-20"],"stops":[{"day":"2025-04-29","text":"DT014 \u2014 costed stop $57,302 (LL03154C)"},{"day":"2025-04-29","text":"DT015 \u2014 costed stop $21,667 (LL03154C)"},{"day":"2025-05-01","text":"DT017 \u2014 costed stop $50,484 (LL03154C)"},{"day":"2025-06-02","text":"DT042 \u2014 costed stop $16,746 (LL03154B)"},{"day":"2025-11-20","text":"DT157 \u2014 costed stop $106,371 (LL03154A2)"},{"day":"2025-12-15","text":"DT175 \u2014 costed stop $20,400 (LL03154A2)"},{"day":"2025-12-29","text":"DT185 \u2014 costed stop $69,000 (LL03154B)"},{"day":"2025-12-29","text":"DT186 \u2014 costed stop $128,333 (LL03154B)"},{"day":"2025-12-30","text":"DT187 \u2014 costed stop $21,190 (LL03154B)"},{"day":"2025-12-30","text":"DT188 \u2014 costed stop $140,238 (LL03154B)"}],"wos":[{"day":"2025-04-10","text":"WO109714 [Corrective] LL03154C4 BOTTOM RIGHT PROFILER#2 \u2014 REPLACE BACKING"},{"day":"2025-04-21","text":"WO111512 [Corrective from PM] LL03154C4 BOTTOM RIGHT PROFILER#2 \u2014 REPLACE BACKING"},{"day":"2025-04-23","text":"WO111938 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE #2 ROLL CUSHION"},{"day":"2025-05-01","text":"WO113299 [Reactive (R&B)] LL03154C PROFILER#2 \u2014 REPLACE TWO BEARINGS PROFILER"},{"day":"2025-05-06","text":"WO114204 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE SHAFT AND BEARINGS"},{"day":"2025-05-28","text":"WO118157 [Corrective from PM] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE L/S #2 PROFILING I/F"},{"day":"2025-06-03","text":"WO119255 [Corrective from PM] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE LEFT #2 PROFILER I/F"},{"day":"2025-06-03","text":"WO119269 [Reactive (R&B)] LL03154B PROFILER#1 \u2014 CHANGE POSITION CYLINDER"},{"day":"2025-06-03","text":"WO119254 [Corrective from PM] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE #1 PROFILER I/F ROLL"},{"day":"2025-06-20","text":"WO122132 [Corrective from PM] LL03154A PROFILING INFEED ROLLS \u2014 CHANGE BOTTOM MIDDLE BEARINGS"},{"day":"2025-07-02","text":"WO124670 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE BOTTOM BEARING ON"},{"day":"2025-07-10","text":"WO125870 [Reactive (R&B)] LL LASALLE MILL \u2014 REPLACE PROFILER VERTICLE"},{"day":"2025-07-14","text":"WO126579 [Corrective] LL03140 OLI \u2014 LEFT PROFILER #2"},{"day":"2025-07-14","text":"WO126633 [Corrective] nan \u2014 ALL PROFILERS OUT OF POSITION"},{"day":"2025-07-15","text":"WO126897 [Corrective from PM] LL03154A2-30 RIGHT PROFILER #1 I/F ROLL \u2014 CHANGE BOTTOM BEARING #3 ROLL"},{"day":"2025-07-19","text":"WO127462 [Reactive (R&B)] LL03154A PROFILING INFEED ROLLS \u2014 CHANGE BOTTOM BEARING ON"},{"day":"2025-07-21","text":"WO128043 [Corrective from PM] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE ROLL,SHAFT, AND"},{"day":"2025-07-24","text":"WO128616 [Corrective] LL03154C PROFILER#2 \u2014 RIGHT SIDE DOOR FOR DRIVE BELT"},{"day":"2025-07-27","text":"WO128961 [Corrective from PM] LL03154A1-30 LEFT PROFILER #1 I/F ROLL ASSY \u2014 REPLACE FLANGE BEARING"},{"day":"2025-08-12","text":"WO131932 [Corrective from PM] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE #1 PROFILER 3RD ROLL"},{"day":"2025-08-25","text":"WO134549 [Corrective] LL03154 PROFILING MODULE \u2014 BUILD PROFILING COUNTERSHAFT"},{"day":"2025-08-29","text":"WO135281 [Corrective] LL13100 BAG HOUSE SYSTEM \u2014 LOW AIR PROFILERS"},{"day":"2025-09-11","text":"WO137465 [Corrective] LL03154B PROFILER#1 \u2014 REPLACE PROFILER #1"},{"day":"2025-09-12","text":"WO137745 [Corrective] LL03160 QUAD SAW MODULE \u2014 LEFT PROFILER #2 MOTOR NOT"},{"day":"2025-09-15","text":"WO138321 [Corrective from PM] LL03154B1 TOP LEFT PROFILER#1 \u2014 REPLACE MISSING JAM NUT ON"},{"day":"2025-09-17","text":"WO138737 [Corrective] LL03154C PROFILER#2 \u2014 INSTALL NEW SELF CLEANING"},{"day":"2025-10-01","text":"WO141241 [Corrective from PM] LL03154A PROFILING INFEED ROLLS \u2014 LEFT #2 PROFILER ROLL TENSION"},{"day":"2025-10-17","text":"WO144088 [Reactive (R&B)] LL03154C1-55 TOP LH PROFILER#2 ELECT ASSY \u2014 *ELECTRICAL* REPLACE"},{"day":"2025-10-20","text":"WO144629 [Reactive (R&B)] nan \u2014 #2 PROFILER BROKEN POLY"},{"day":"2025-10-23","text":"WO145147 [Corrective from PM] LL03154A1-05 LEFT PROFILER #1 I/F ROLLS DRI \u2014 REPLACE TOP AND BOTTOM"},{"day":"2025-10-23","text":"WO145149 [Corrective from PM] LL03154A1-30 LEFT PROFILER #1 I/F ROLL ASSY \u2014 REPLACE SHAFT AND BEARINGS"},{"day":"2025-10-27","text":"WO145858 [Corrective] LL03154A PROFILING INFEED ROLLS \u2014 BUILD FEED ROLLS TO BE"},{"day":"2025-10-28","text":"WO146091 [Corrective] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE MIDDLE ROLL ON #2"},{"day":"2025-10-29","text":"WO146291 [Corrective] LL03154A2-30 RIGHT PROFILER #1 I/F ROLL \u2014 REPLACE BOTTOM BEARING"},{"day":"2025-11-12","text":"WO148779 [Corrective from PM] LL03154B PROFILER#1 \u2014 REPLACE LEFT SIDE #1 PROFILER"},{"day":"2025-11-13","text":"WO148823 [Corrective from PM] LL03154A1-05 LEFT PROFILER #1 I/F ROLLS DRI \u2014 REPLACE  DRIVE"},{"day":"2025-11-16","text":"WO149210 [Reactive (R&B)] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 RIGHT SIDE PROFILER PRESS ROLL"},{"day":"2025-11-17","text":"WO149628 [Corrective] LL07210A PLANER INFEED TABLE ROLLS \u2014 CHAIN BROKE ON PROFILER"},{"day":"2025-11-19","text":"WO150087 [Corrective] LL03154B PROFILER#1 \u2014 *ELECTRICAL* REPLACE"},{"day":"2025-11-20","text":"WO150098 [Reactive (R&B)] LL03154C3 TOP RIGHT PROFILER#2 \u2014 CHANGED RIGHT SIDE #2 INFEED"},{"day":"2025-11-20","text":"WO150107 [Reactive (R&B)] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 BUILD PROFILER INFFED ROLL"},{"day":"2025-11-25","text":"WO151233 [Corrective] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE TRIPLE SPROCKET AND"},{"day":"2025-11-25","text":"WO151234 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE BOTTOM BEARING"},{"day":"2025-12-15","text":"WO154692 [Reactive (R&B)] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE MIDDLE BEARING ON LEFT"},{"day":"2025-12-22","text":"WO155885 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE RIGHT #1"},{"day":"2025-12-29","text":"WO157078 [Corrective] LL03154C PROFILER#2 \u2014 REPLACE OLD STYLE PROFILER"},{"day":"2025-12-30","text":"WO157321 [Reactive (R&B)] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACED DRIVE"},{"day":"2025-12-30","text":"WO157300 [Reactive (R&B)] LL03154B PROFILER#1 \u2014 REPLACE BROKE LEFT SIDE"},{"day":"2025-12-31","text":"WO157515 [Reactive (R&B)] nan \u2014 LEFT SIDE PROFILER #1 SIDE"},{"day":"2026-01-05","text":"WO158440 [Corrective] LL03154 PROFILING MODULE \u2014 REPLACE ALL 4 CENTRAL ANVILS"},{"day":"2026-01-12","text":"WO159775 [Corrective] LL03154 PROFILING MODULE \u2014 INSPECT MOTOR ON RIGHT SIDE #2"},{"day":"2026-01-12","text":"WO159790 [Reactive (R&B)] nan \u2014 LEFT PROFILER #1 TOP ANVIL"},{"day":"2026-01-12","text":"WO159809 [Corrective from PM] LL03154B3-05 TOP RH PROFILER#1 DRIVE ASSY \u2014 REPLACE DRIVE"},{"day":"2026-01-22","text":"WO161570 [Corrective] LL03154C PROFILER#2 \u2014 REPLACE RIGHT SIDE MODULE"},{"day":"2026-02-03","text":"WO163781 [Corrective] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE BEARING ON"},{"day":"2026-02-26","text":"WO167901 [Corrective] LL03154A PROFILING INFEED ROLLS \u2014 *ELECTRICAL* CORRECT PROBLEM"},{"day":"2026-03-05","text":"WO169320 [Reactive (R&B)] LL03154A1-30 LEFT PROFILER #1 I/F ROLL ASSY \u2014 REPLACE BEARING ON 1ST ROLL"},{"day":"2026-03-08","text":"WO169682 [Reactive (R&B)] LL03154C4 BOTTOM RIGHT PROFILER#2 \u2014 TROUBLE SHOOT PROFILER ISSUE"},{"day":"2026-03-16","text":"WO171313 [Corrective] LL03154 PROFILING MODULE \u2014 GREASE ALL PROFILER ARBOR"},{"day":"2026-03-18","text":"WO171807 [Reactive (R&B)] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE SIDE"},{"day":"2026-03-19","text":"WO171836 [Reactive (R&B)] nan \u2014 LEFT SIDE #1 PROFILER INFEED"},{"day":"2026-03-24","text":"WO172840 [Corrective] LL03154A PROFILING INFEED ROLLS \u2014 REPLACE #2 LEFT AND RIGHT"},{"day":"2026-03-26","text":"WO173102 [Corrective] LL03000 SAWLINE \u2014 REPLACE RIGHT PROFILER"},{"day":"2026-03-30","text":"WO174116 [Corrective from PM] LL03154C PROFILER#2 \u2014 REPLACE RIGHT SIDE PROFILER"},{"day":"2026-04-06","text":"WO175548 [Corrective] LL03154B PROFILER#1 \u2014 REMOVE BROKEN BOLT ON VERTICLE"},{"day":"2026-04-07","text":"WO175819 [Corrective from PM] LL03154A PROFILING INFEED ROLLS \u2014 INSTALL UPGRADED"},{"day":"2026-04-15","text":"WO177222 [Corrective] LL03154A1-55 LEFT PROFILER #1 I/F ROLLS ELE \u2014 *ELECTRICAL* REPLACE CABLE FOR"},{"day":"2026-04-27","text":"WO179550 [Corrective from PM] LL03154B2-05 BTM LH PROFILER#1 DRIVE ASSY \u2014 REPLACE BOTTOM LEFT"},{"day":"2026-05-06","text":"WO181277 [Corrective] LL03154A1-55 LEFT PROFILER #1 I/F ROLLS ELE \u2014 *ELECTRICAL* REPAIR MOTOR"},{"day":"2026-05-25","text":"WO184893 [Corrective from PM] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE PROFILER INFEED ROLLS"},{"day":"2026-06-15","text":"WO188731 [Reactive (R&B)] LL03154C PROFILER#2 \u2014 REPLACE LEFT PROFILER"},{"day":"2026-06-15","text":"WO188740 [Corrective from PM] LL03154A PROFILING INFEED ROLLS \u2014 REPLACE INFEED ROLLS, PROFILER"},{"day":"2026-07-03","text":"WO192296 [Reactive (R&B)] LL03154A2 RIGHT PROFILING INFEED ROLLS \u2014 REPLACE #2 & #3 BOTTOM"},{"day":"2026-07-03","text":"WO192297 [Corrective] LL03154A1 LEFT PROFILING INFEED ROLLS \u2014 REPLACE BOTTOM #2"},{"day":"2026-07-07","text":"WO193059 [Reactive (R&B)] LL03154C1-96 TOP LH PROFILER#2 HYD ASSY \u2014 REPLACE"}],"ledger":[{"day":"2025-05-12","text":"2025-05-12 07:29 [Hydraulic Cylinder] Replace left #2 bottom profiler cylinder"},{"day":"2025-07-10","text":"2025-07-10 13:43 [Hydraulic Cylinder] Changed cylinder on left #2 profiler"},{"day":"2025-07-13","text":"2025-07-13 19:49 [Fuse/Short] Change breaker"},{"day":"2025-08-01","text":"2025-08-01 01:37 [Circle Saw Guide] Profiler #2 infeed rolls faulted/ changed quad and tbl saws"},{"day":"2025-12-08","text":"2025-12-08 00:26 [Circle Saw Guide] Profiler out of position stuck cant/changed saws"}],"stats":{"2":{"flat":{"n":17,"h7":7,"h14":12,"fires":["2025-04-27","2025-05-06","2025-05-26","2025-06-23","2025-07-02","2025-10-13","2025-11-06","2025-11-25","2025-12-16","2025-12-30","2026-03-02","2026-03-11","2026-04-26","2026-05-11","2026-05-28","2026-06-07","2026-06-17"]},"ra":[{"fired":"2025-04-27","closed":"2025-05-20","days":23,"why":"repair + 2 calm days","refires":["2025-04-28"],"hit":true,"strict":true,"first_ev":"2025-04-29"},{"fired":"2025-05-26","closed":"2025-05-28","days":2,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":false,"first_ev":"2025-05-28"},{"fired":"2025-06-23","closed":"2025-07-15","days":22,"why":"repair + 2 calm days","refires":["2025-07-02"],"hit":true,"strict":true,"first_ev":"2025-07-10"},{"fired":"2025-10-13","closed":"2025-10-30","days":17,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-10-17"},{"fired":"2025-11-06","closed":"2025-11-16","days":10,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-11-16"},{"fired":"2025-11-25","closed":"2025-12-08","days":13,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-12-08"},{"fired":"2025-12-16","closed":"2026-01-06","days":21,"why":"repair + 2 calm days","refires":["2025-12-17","2025-12-21","2025-12-30"],"hit":true,"strict":true,"first_ev":"2025-12-29"},{"fired":"2026-03-02","closed":"2026-03-26","days":24,"why":"repair + 2 calm days","refires":["2026-03-05","2026-03-10","2026-03-13"],"hit":true,"strict":true,"first_ev":"2026-03-05"},{"fired":"2026-04-26","closed":"2026-05-07","days":11,"why":"repair + 2 calm days","refires":["2026-04-29","2026-05-03"],"hit":true,"strict":false,"first_ev":"2026-04-27"},{"fired":"2026-05-11","closed":"2026-05-25","days":14,"why":"repair + 2 calm days","refires":["2026-05-15"],"hit":true,"strict":false,"first_ev":"2026-05-25"},{"fired":"2026-05-28","closed":"2026-06-22","days":25,"why":"repair + 2 calm days","refires":["2026-06-11","2026-06-17"],"hit":true,"strict":true,"first_ev":"2026-06-15"}],"ra_hits":11,"ra_n":11},"3":{"flat":{"n":11,"h7":8,"h14":9,"fires":["2025-04-29","2025-05-08","2025-10-14","2025-11-09","2025-12-17","2025-12-31","2026-03-03","2026-03-12","2026-05-29","2026-06-08","2026-06-18"]},"ra":[{"fired":"2025-04-29","closed":"2025-05-20","days":21,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-04-29"},{"fired":"2025-10-14","closed":"2025-10-30","days":16,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-10-17"},{"fired":"2025-11-09","closed":"2025-11-16","days":7,"why":"repair + 2 calm days","refires":[],"hit":true,"strict":true,"first_ev":"2025-11-16"},{"fired":"2025-12-17","closed":"2026-01-06","days":20,"why":"repair + 2 calm days","refires":["2025-12-22","2025-12-31"],"hit":true,"strict":true,"first_ev":"2025-12-29"},{"fired":"2026-03-03","closed":"2026-03-26","days":23,"why":"repair + 2 calm days","refires":["2026-03-11"],"hit":true,"strict":true,"first_ev":"2026-03-05"},{"fired":"2026-05-29","closed":"2026-06-22","days":24,"why":"repair + 2 calm days","refires":["2026-06-12","2026-06-18"],"hit":true,"strict":true,"first_ev":"2026-06-15"}],"ra_hits":6,"ra_n":6}},"base7":0.326,"base14":0.503};
+const DAYS = D.days, N = DAYS.length, CH = D.channels;
+const CHCOL = ['--ch1','--ch2','--ch3','--ch4'];
+const CHNAME = {'oli_rmc_LeftPrflr1InfdRoll':'Left P1','oli_rmc_LeftPrflr2InfdRoll':'Left P2',
+                'oli_rmc_RightPrflr1InfdRoll':'Right P1','oli_rmc_RightPrflr2InfdRoll':'Right P2'};
+const S2 = D.stats['2'], S3 = D.stats['3'];
+const W2 = S2.ra;
+function pct(a,b){ return Math.round(100*a/b) + '%'; }
+function idxOf(d){ let lo=0,hi=N-1,r=N-1;
+  while(lo<=hi){const m=(lo+hi)>>1; if(DAYS[m]>=d){r=m;hi=m-1}else lo=m+1} return r; }
+
+/* facts */
+const nStrict = W2.filter(w => w.strict).length;
+document.getElementById('facts').innerHTML = `
+  <div><dt>Warnings (repair-aware)</dt><dd>${S2.ra_n} <small>vs ${S3.ra_n} at 3 days</small></dd></div>
+  <div><dt>Closed against a repair</dt><dd>${S2.ra_hits} <small>of ${S2.ra_n}</small></dd></div>
+  <div><dt>Strict evidence in window</dt><dd>${nStrict} <small>of ${S2.ra_n} · CPM-only ${S2.ra_n - nStrict}</small></dd></div>
+  <div><dt>Raw firings</dt><dd>${S2.flat.n} <small>vs ${S3.flat.n} at 3 days</small></dd></div>
+  <div><dt>Flat 14-day precision</dt><dd class="sm">${pct(S2.flat.h14,S2.flat.n)} vs a ${Math.round(100*D.base14)}% chance base</dd></div>
+  <div><dt>Incremental savings</dt><dd>~$75k<small>/yr central ($64–91k) — reactive time only</small></dd></div>`;
+
+/* chart */
+(function(){
+  const W=1080,H=360,ML=46,MR=14,MT=52,MB=30,iw=W-ML-MR,ih=H-MT-MB,YMAX=12,YMIN=-12;
+  const X=i=>ML+iw*i/(N-1), Y=v=>MT+ih*(1-(Math.max(YMIN,Math.min(YMAX,v))-YMIN)/(YMAX-YMIN));
+  const S=[`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="two-day rule warnings over the full record">`];
+  S.push(`<rect x="${ML}" y="${Y(3)}" width="${iw}" height="${Y(-3)-Y(3)}" fill="var(--band)"/>`);
+  for(const w of W2){
+    const a=X(idxOf(w.fired)), b=X(idxOf(w.closed));
+    const wash = w.strict ? '--amber-dim' : '--paper3';
+    const line = w.strict ? '--amber' : '--axis';
+    S.push(`<rect x="${a}" y="${MT-4}" width="${Math.max(5,b-a)}" height="${ih+4}" fill="var(${wash})"/>`);
+    S.push(`<line x1="${a}" x2="${a}" y1="${MT-4}" y2="${MT+ih}" stroke="var(${line})" stroke-width="1.6"/>`);
+    for(const rf of w.refires){
+      const x=X(idxOf(rf));
+      S.push(`<path d="M ${x} ${MT-9} l 4 5 l -4 5 l -4 -5 z" fill="var(${line})"/>`);
+    }
+  }
+  for(const v of [-12,-6,-3,0,3,6,12]){
+    S.push(`<line x1="${ML}" x2="${W-MR}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--grid)"/>`);
+    S.push(`<text x="${ML-7}" y="${Y(v)+4}" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="DM Mono,monospace">${v}</text>`);
+  }
+  let lastM='';
+  for(let i=0;i<N;i++){const m=DAYS[i].slice(0,7);
+    if(m!==lastM){lastM=m;
+      S.push(`<line x1="${X(i)}" x2="${X(i)}" y1="${MT+ih}" y2="${MT+ih+4}" stroke="var(--axis)"/>`);
+      if(['01','04','07','10'].includes(m.slice(5)))
+        S.push(`<text x="${X(i)}" y="${H-9}" font-size="10.5" fill="var(--muted)" font-family="DM Mono,monospace">${m}</text>`);
+  }}
+  CH.forEach((c,j)=>{
+    let path='',pen=false; const s=D.series[c];
+    for(let i=0;i<N;i++){const v=s[i];
+      if(v===null||v===undefined){pen=false;continue}
+      path+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1); pen=true;}
+    S.push(`<path d="${path}" fill="none" stroke="var(${CHCOL[j]})" stroke-width="1.6" opacity="0.9"/>`);
+    for(let i=0;i<N;i++){const v=s[i];
+      if(v!==null&&v>YMAX) S.push(`<text x="${X(i)}" y="${MT+10}" font-size="9.5" fill="var(${CHCOL[j]})" text-anchor="middle">▲</text>`);
+      if(v!==null&&v<YMIN) S.push(`<text x="${X(i)}" y="${MT+ih-3}" font-size="9.5" fill="var(${CHCOL[j]})" text-anchor="middle">▼</text>`);}
+  });
+  const LN=[['stops','--red',20],['wos','--wo',31],['ledger','--ledger',42]];
+  for(const [key,col,yy] of LN)
+    for(const e of D[key])
+      S.push(`<rect x="${X(idxOf(e.day))-2}" y="${yy-5}" width="4" height="8" rx="2" fill="var(${col})"/>`);
+  S.push(`<text x="${ML}" y="10" font-size="9.5" fill="var(--muted)" font-family="DM Mono,monospace">◆ re-fires · lanes: stops / work orders / ledger</text>`);
+  S.push(`<line x1="${ML}" x2="${W-MR}" y1="${MT+ih}" y2="${MT+ih}" stroke="var(--axis)"/>`);
+  S.push('</svg>');
+  const box=document.getElementById('chart');
+  box.innerHTML=S.join('');
+  const tip=document.createElement('div'); tip.className='tip'; box.appendChild(tip);
+  const svg=box.querySelector('svg');
+  svg.addEventListener('mousemove',ev=>{
+    const r=svg.getBoundingClientRect();
+    let i=Math.round(((ev.clientX-r.left)/r.width*W-ML)/iw*(N-1));
+    i=Math.max(0,Math.min(N-1,i));
+    const d=DAYS[i];
+    const zz=CH.map((c,j)=>{const v=D.series[c][i];
+      return v===null||v===undefined?null:`<span style="color:var(${CHCOL[j]})">${CHNAME[c]}</span> <b class="mono">${v}</b>`;}).filter(Boolean);
+    const near=[];
+    for(const [key,col] of [['stops','--red'],['wos','--wo'],['ledger','--ledger']])
+      for(const e of D[key])
+        if(Math.abs(idxOf(e.day)-i)<=1) near.push(`<div class="ev" style="color:var(${col})">${e.text.slice(0,110)}</div>`);
+    const w=W2.find(w=>w.fired<=d&&d<=w.closed);
+    tip.style.display='block';
+    tip.style.left=Math.min(box.clientWidth-370,Math.max(0,(ev.clientX-r.left)+14))+'px';
+    tip.style.top=(ev.clientY-r.top+16)+'px';
+    tip.innerHTML=`<div class="d">${d}</div>`+
+      (w?`<div style="color:var(${w.strict?'--amber':'--muted'});font-size:12px;font-weight:700">warning open (fired ${w.fired})</div>`:'')+
+      (zz.length?`<div style="margin-top:3px">${zz.join(' · ')}</div>`:'<div>no production</div>')+
+      near.slice(0,3).join('');
+  });
+  svg.addEventListener('mouseleave',()=>tip.style.display='none');
+})();
+document.getElementById('chartnote').innerHTML =
+  'The June 2025 warning (fired Jun 23) absorbs the fragile July firing and is confirmed by the Jul 10 '
+  + 'cylinder repair. The May 26 2025 warning closed against the May 28 infeed-roll CPM — and the $16.7k '
+  + 'profiler stop DT042, already attributed to reactive WO119269 in the verified log, landed the day '
+  + 'after it closed: verdicts at this threshold are timing-fragile. Longest open warning: '
+  + Math.max(...W2.map(w=>w.days)) + ' days. Telemetry ends 2026-06-24.';
+
+/* warnings table */
+const tb=document.querySelector('#wtable tbody');
+for(const w of W2){
+  tb.insertAdjacentHTML('beforeend',`<tr>
+    <td class="num">${w.fired}</td><td class="num">${w.closed}</td><td class="num">${w.days}</td>
+    <td>${w.why}</td><td class="num">${w.refires.length ? w.refires.map(d=>d.slice(5)).join(', ') : '—'}</td>
+    <td class="num">${w.first_ev ?? '—'}</td>
+    <td><span class="badge ${w.strict?'hit':''}">${w.strict?'confirmed — reactive / stop / ledger':'CPM repair only'}</span></td></tr>`);
+}
+document.getElementById('wnote').innerHTML =
+  'Every window closed against a documented profiler repair; the split that matters is whether strict '
+  + 'evidence (reactive / stop / ledger) fell inside it. The May 26 2025 window is the boundary case: it '
+  + 'closed May 28 against an infeed-roll CPM, and stop <b>DT042 ($16.7k, LL03154B — attributed to '
+  + 'reactive WO119269 in the verified downtime log)</b> landed June 2, one day after the close. '
+  + 'Repair-aware confirmation saturates once CPMs count as repairs: a window opened on a RANDOM '
+  + 'production day closes against a documented profiler repair 88% of the time (measured), and no '
+  + 'rule — 1-, 2-, or 3-day — beats that base. The discriminating column is strict evidence on flat '
+  + 'windows. '
+  + 'The last three months have work-order evidence only.';
+
+/* comparison table */
+const cmp=document.querySelector('#cmp tbody');
+const rows=[
+  ['Raw firings (7-day dedup)', S3.flat.n, S2.flat.n],
+  ['Hits within 7 days (strict)', `${S3.flat.h7} / ${S3.flat.n} (${pct(S3.flat.h7,S3.flat.n)})`,
+                                   `${S2.flat.h7} / ${S2.flat.n} (${pct(S2.flat.h7,S2.flat.n)})`],
+  ['Hits within 14 days (strict)', `${S3.flat.h14} / ${S3.flat.n} (${pct(S3.flat.h14,S3.flat.n)})`,
+                                    `${S2.flat.h14} / ${S2.flat.n} (${pct(S2.flat.h14,S2.flat.n)})`],
+  ['Chance base, 7 / 14 days', `${Math.round(100*D.base7)}% / ${Math.round(100*D.base14)}%`,
+                               `${Math.round(100*D.base7)}% / ${Math.round(100*D.base14)}%`],
+  ['Repair-aware warnings', S3.ra_n, S2.ra_n],
+  ['… closed against a repair', `${S3.ra_hits} / ${S3.ra_n}`, `${S2.ra_hits} / ${S2.ra_n}`],
+  ['… with strict evidence inside', `${S3.ra.filter(w=>w.strict).length} / ${S3.ra_n}`,
+                                     `${S2.ra.filter(w=>w.strict).length} / ${S2.ra_n}`],
+  ['Longest open warning', Math.max(...S3.ra.map(w=>w.days)) + ' days', Math.max(...S2.ra.map(w=>w.days)) + ' days'],
+];
+for(const [k,a,b] of rows)
+  cmp.insertAdjacentHTML('beforeend',`<tr><td><b>${k}</b></td><td class="num">${a}</td><td class="num">${b}</td></tr>`);
+
+/* reveal */
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+  document.querySelectorAll('.rv').forEach(e=>e.classList.add('in'));
+}else{
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+  document.querySelectorAll('.rv').forEach(e=>io.observe(e));
+}
+</script>
+</body>
+</html>
