@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profiler Signal — Method</title>
+<script>try{if(sessionStorage.getItem('pfs_ok')!=='1')location.replace('index.html');}catch(e){location.replace('index.html');}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav><div class="in">
+  <a class="brand" href="index.html">Profiler Signal<span> · LaSalle</span></a>
+  <a class="lnk" href="index.html">Overview</a>
+  <a class="lnk" href="episode.html">Events</a>
+  <a class="lnk on" href="signal.html" aria-current="page">Method</a>
+  <span class="tag">signal definition</span>
+</div></nav>
+
+<div class="wrap narrow">
+  <div class="kicker rv">Definition · mathematics · scoring</div>
+  <h1 class="rv" style="max-width:24ch">What the signal is, and how it's calculated</h1>
+  <p class="lead rv" style="max-width:68ch">The profiler signal is a daily statistical watch on four
+  motion-controller telemetry channels. It asks one question every production day: <b>are the profiler
+  infeed rolls tracking their commanded position the way they normally do?</b> When the answer is no for
+  two production days in a row, the signal fires.</p>
+
+  <section class="rv">
+    <h2>The four channels</h2>
+    <p>The canter line's profilers are positioned by servo axes. For each axis the control system reports
+    the difference between the <b>commanded</b> position and the <b>actual</b> position — the following
+    error. A healthy axis holds that error small and steady. A degrading component — a worn bearing, a
+    failing hydraulic cylinder, a stretching chain, a dying drive — shows up as a sustained change in that
+    error, days before the component fails outright.</p>
+    <div class="chan">
+      <div style="--cc:var(--ch1)">oli_rmc_LeftPrflr1InfdRoll<span>Left profiler #1, infeed roll axis</span></div>
+      <div style="--cc:var(--ch2)">oli_rmc_LeftPrflr2InfdRoll<span>Left profiler #2, infeed roll axis</span></div>
+      <div style="--cc:var(--ch3)">oli_rmc_RightPrflr1InfdRoll<span>Right profiler #1, infeed roll axis</span></div>
+      <div style="--cc:var(--ch4)">oli_rmc_RightPrflr2InfdRoll<span>Right profiler #2, infeed roll axis</span></div>
+    </div>
+    <p>Channel selection is part of the signal. These four axes sit on the components that dominate the
+    profiler's failure record — the infeed rolls and their bearings, cylinders, chains, and drives.
+    Widening the group to other profiler channels (amperages, position axes) was tested and it dilutes the
+    signal; the narrow group is what validated.</p>
+  </section>
+
+  <section class="rv">
+    <h2>How it's calculated</h2>
+    <div class="diagram"><svg viewBox="0 0 860 80" role="img" aria-label="Pipeline: five-minute telemetry, producing filter, daily median, trailing baseline, deviation score, two-day rule">
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--axis)"/></marker></defs>
+      <g font-family="Manrope,sans-serif" font-size="12" fill="var(--ink)">
+        <rect x="1" y="18" width="116" height="44" rx="9" fill="var(--paper2)"/>
+        <text x="59" y="38" text-anchor="middle">5-minute</text><text x="59" y="53" text-anchor="middle">telemetry</text>
+        <line x1="119" y1="40" x2="141" y2="40" stroke="var(--axis)" stroke-width="1.4" marker-end="url(#a)"/>
+        <rect x="143" y="18" width="116" height="44" rx="9" fill="var(--paper2)"/>
+        <text x="201" y="38" text-anchor="middle">producing</text><text x="201" y="53" text-anchor="middle">buckets only</text>
+        <line x1="261" y1="40" x2="283" y2="40" stroke="var(--axis)" stroke-width="1.4" marker-end="url(#a)"/>
+        <rect x="285" y="18" width="116" height="44" rx="9" fill="var(--paper2)"/>
+        <text x="343" y="38" text-anchor="middle">daily</text><text x="343" y="53" text-anchor="middle">median</text>
+        <line x1="403" y1="40" x2="425" y2="40" stroke="var(--axis)" stroke-width="1.4" marker-end="url(#a)"/>
+        <rect x="427" y="18" width="126" height="44" rx="9" fill="var(--paper2)"/>
+        <text x="490" y="38" text-anchor="middle">vs trailing</text><text x="490" y="53" text-anchor="middle">30-day baseline</text>
+        <line x1="555" y1="40" x2="577" y2="40" stroke="var(--axis)" stroke-width="1.4" marker-end="url(#a)"/>
+        <rect x="579" y="18" width="116" height="44" rx="9" fill="var(--paper2)"/>
+        <text x="637" y="38" text-anchor="middle">deviation</text><text x="637" y="53" text-anchor="middle">score z</text>
+        <line x1="697" y1="40" x2="719" y2="40" stroke="var(--axis)" stroke-width="1.4" marker-end="url(#a)"/>
+        <rect x="721" y="18" width="126" height="44" rx="9" fill="var(--ink)"/>
+        <text x="784" y="38" text-anchor="middle" font-weight="700" fill="#fff">|z| ≥ 3 for</text>
+        <text x="784" y="53" text-anchor="middle" font-weight="700" fill="#fff">2 days → fire</text>
+      </g>
+    </svg></div>
+
+    <ol class="steps">
+      <li><b>Keep producing time only.</b> A 5-minute bucket counts when the line is actually cutting:
+      the trimmer is receiving boards (<span class="mono">trimmer_input_board_count &gt; 50</span>,
+      <span class="mono">trimmer_trimvol_total &gt; 0</span>) and the canter line is feeding
+      (<span class="mono">oli_cant_qty &gt; 0</span>). Idle time, jams, and 4×4-bypass runs never enter the
+      statistics — zeros during idle are sensor behaviour, never signal.</li>
+      <li><b>Summarise each production day.</b> For each channel c and day d, take the median of its
+      producing buckets.
+      <div class="formula">m<sub>c</sub>(d) = median( readings during producing buckets of day d )</div>
+      The median ignores single-bucket spikes; only a shift in the day's typical behaviour moves it.</li>
+      <li><b>Build the channel's own baseline.</b> Each day is compared against that channel's trailing
+      30 days, shifted one day so today never judges itself.
+      <div class="formula">M<sub>c</sub>(d) = median of m<sub>c</sub> over the prior 30 days
+      <br>S<sub>c</sub>(d) = robust standard deviation of the same window
+      <span class="c">Robust SD = IQR ÷ 1.349 (the reference implementation uses the equivalent
+      MAD × 1.4826). Both estimate one standard deviation while ignoring outliers, so one bad day never
+      distorts the yardstick.</span></div></li>
+      <li><b>Score the deviation.</b>
+      <div class="formula">z<sub>c</sub>(d) = ( m<sub>c</sub>(d) − M<sub>c</sub>(d) ) / S<sub>c</sub>(d)
+      <span class="c">How many normal days' worth of variation today sits away from this channel's own
+      recent normal. |z| ≥ 3 is a deviation day — roughly a 1-in-300 event per channel-day under normal
+      behaviour. Deviations count in both directions.</span></div></li>
+      <li><b>Fire on persistence, never on a single day.</b> The signal fires when <b>any of the four
+      channels</b> holds |z| ≥ 3 for <b>two consecutive production days</b>. One wild day is noise; two in
+      a row is a component that has changed state. This persistence rule is why the record contains no
+      false alarms — and a <b>third</b> deviation day, or a re-fire inside an open warning, is the
+      escalation tier (see the response protocol on the Overview).</li>
+    </ol>
+  </section>
+
+  <section class="rv">
+    <h2>The warning window, and how it clears</h2>
+    <h3>Repair-aware clearing — the operational rule</h3>
+    <ul>
+      <li>The warning stays open while any channel keeps deviating.</li>
+      <li>When the channels return within ±2 robust SD of baseline, a five-day timer runs; five
+      consecutive calm days close the window.</li>
+      <li>A <b>documented repair</b> followed by two calm production days closes it immediately — the
+      telemetry confirms the fix.</li>
+      <li>A calm return with <b>no documented repair</b> holds the warning on the five-day timer rather
+      than clearing it. An unexplained recovery is not trusted. June 2026 vindicated this: the channels
+      calmed without a repair, re-deviated, and the roll replacements landed in July.</li>
+      <li>A re-deviation inside an open window is a <b>re-fire</b> — the escalation signature, "the fix did
+      not hold." December 30 and June 16–19 are the in-record examples.</li>
+    </ul>
+    <h3>Flat seven-day scoring — the audit rule</h3>
+    <p>The stricter convention never looks at the telemetry after the firing. It asks only whether a
+    documented profiler event followed within seven days. Fully mechanical, and hand-checkable.</p>
+  </section>
+
+  <section class="rv">
+    <h2>Scoring: what counts as a hit</h2>
+    <p>A firing scores a hit when a documented profiler event falls inside its window — a costed
+    canter-line stop attributed to the profiler, a reactive work order on the profiler, or an
+    operator-ledger repair record naming it. Everything is scored against the mill's own records; nothing
+    is self-graded from the telemetry.</p>
+    <div class="panel">
+      <div class="tablebox"><table>
+        <thead><tr><th>Scoring convention</th><th class="num">Result</th><th class="num">Chance rate</th><th>Significance</th></tr></thead>
+        <tbody>
+          <tr><td>Strict repair-aware windows</td><td class="num">8 of 9</td><td class="num">62%</td>
+              <td>p ≈ 0.089 [binomial vs placebo base]; p ≈ 0.11 [exact circular-shift permutation]</td></tr>
+          <tr><td>Flat window, evidence within ~14 days</td><td class="num">7 of 9</td><td class="num">—</td>
+              <td>p ≈ 0.052 [exact circular-shift permutation, all 343 shifts]</td></tr>
+          <tr><td>Failure-episode coverage</td><td class="num">11 of 14</td><td class="num">—</td>
+              <td>3-day rule covers 8 of 14 on the same machinery</td></tr>
+          <tr><td>False alarms</td><td class="num">0</td><td class="num">—</td>
+              <td>every warning contains a documented profiler repair</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">The one strict miss is <a class="more" href="episode.html#2">Event 2</a>, closed by
+      a PM-raised roll replacement on the deviating side — a scoring miss and an operational success. The
+      permutation p-values are the honest ones: they shift the whole deviation series against the fixed
+      evidence record (all 343 circular shifts, deterministic), preserving the clustering that binomial
+      tests ignore. Full head-to-head against the 3-day rule:
+      <span class="mono">../profiler-signal-2day/DEEP_DIVE_FINDINGS.md</span> — the 2-day warnings contain
+      every 3-day warning, fire earlier on all six (by 1–3 days typically, once by 33), and add three
+      failure-episode catches including the two costliest misses.</p>
+    </div>
+
+    <h3>Verification behind the numbers</h3>
+    <dl class="dl">
+      <div><dt>Specificity</dt><dd>The same firings were scored against every other machine centre's
+        failures. They predict none of them — the signal is profiler-specific and does not fire on
+        mill-wide chaos.</dd></div>
+      <div><dt>Re-derivation</dt><dd>A second analysis environment was given only the written rule — no
+        scripts, no thresholds as implemented, no firing dates — and asked to reconstruct the signal from
+        raw telemetry. It rediscovered essentially the same episodes, produced no false alarms across its
+        implementation variants, and returned p = 0.060 against the original p = 0.054.</dd></div>
+      <div><dt>Prospective</dt><dd>The analysis was frozen on data ending March 2026. The signal then fired
+        in the spring, recorded as an open prediction before any outcome data existed in the workspace. The
+        July 2026 work-order extract confirmed the outcome: a reactive replacement on <b>exactly the
+        deviating side</b> — WO188731, "REPLACE LEFT PROFILER"
+        (<a class="more" href="episode.html#9">Event 9</a>).</dd></div>
+      <div><dt>Rule selection</dt><dd>The two-day rule was adopted after a head-to-head against the
+        original three-day rule on identical machinery (2026-09-01 deep dive): the 2-day warning set
+        contains every 3-day warning, fires earlier on all of them, covers 11 of 14 failure episodes
+        against 8 of 14, and holds zero false alarms. It also times better against the weekly PM: eight of
+        nine warnings went live with a Tuesday walk still ahead of the failure evidence, against three of
+        six for the 3-day rule.</dd></div>
+    </dl>
+  </section>
+
+  <section class="rv">
+    <h2>Limitations, stated plainly</h2>
+    <ul>
+      <li><b>The signal is one-directional.</b> It covers 11 of the 14 profiler failure episodes on
+      record. Of the three it misses, two are single-day sudden breaks — sudden failures do not drift
+      first — and one begins after the telemetry record ends. Silence guarantees nothing. A firing, on
+      this record, has always meant something is physically wrong.</li>
+      <li><b>Nine warnings is a small sample.</b> The honest statistical label is permutation
+      p ≈ 0.05–0.11: dominant over the 3-day rule on every measured axis, suggestive, and short of proof.
+      Every additional prospectively-scored warning tightens it.</li>
+      <li><b>The warning state is open ~165 calendar days per year</b> under this rule (95 under 3-day) —
+      about 45% of the calendar. A standing warning treated as a siren will be tuned out; the two-tier
+      protocol exists for exactly this reason. Tier 1 costs nothing (it aims a walk that already
+      happens); only tier 2 escalates.</li>
+      <li><b>Outcome coverage thins after early March 2026.</b> The costed-stop log and the operator ledger
+      end there — the ledger moved to a new system — so the last two warnings are scored on work orders
+      alone, and an unticketed crew fix of the kind documented in Event 1 would be invisible.</li>
+      <li><b>Threshold sensitivity is real.</b> Warning counts move with the |z| threshold (12 / 9 / 7 / 6
+      at 2.5 / 3.0 / 3.5 / 4.0), so the rule should always be quoted with its implementation pinned. The
+      3-day era's July-versus-October derivation swap is resolved under this rule — both arcs fire as
+      separate warnings in every derivation.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Canonical write-up: <span class="mono">deliverables/Sprint 3/Profiler Channel Signal/Profiler Signal
+    Findings Report_final_2026-08-21</span> (3-day era) and
+    <span class="mono">../profiler-signal-2day/DEEP_DIVE_FINDINGS.md</span> (2-day adoption, 2026-09-01).
+    Deviation scores:
+    <span class="mono">data/meta_analysis/outputs_ext/r6_daily_z_extended.csv</span>. Outcome records: the
+    verified downtime log, the operator ledger through 2026-03-07, and the work-order extract of
+    2026-07-10. Rebuild these pages with <span class="mono">build_data.py</span>; audit them with
+    <span class="mono">audit_events.py</span>; head-to-head and permutation machinery:
+    <span class="mono">deep_headtohead.py</span>, <span class="mono">deep_perm_full.py</span>.
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+<script>initMotion();</script>
+</body>
+</html>
